@@ -30,8 +30,8 @@ function App() {
   const [prsData, setPrsData] = useState([]);
   const [prsLinks, setPrsLinks] = useState([]);
   const [urlData, setUrlData] = useState({
-    owner: 'koinearth',
-    repository: 'wf-webapp-service',
+    owner: 'lalitmee',
+    repository: 'dotfiles',
     baseBrach: '',
   });
   const [repoType, setRepoType] = useState('public');
