@@ -1,4 +1,5 @@
 {
+  "homepage": "https//lalitme.github.io/prs-list",
   "name": "prs-merged-since",
   "version": "0.1.0",
   "private": true,
@@ -36,13 +37,15 @@
     "eslint-plugin-react": "^7.24.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "eslint-plugin-redux-saga": "^1.2.1",
+    "gh-pages": "^3.2.3",
     "prettier": "^2.3.2"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
