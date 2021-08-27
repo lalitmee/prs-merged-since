@@ -1,24 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Octokit } from '@octokit/core';
 import { Virtuoso } from 'react-virtuoso';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import isEmpty from 'lodash/isEmpty';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
+import Chip from '@material-ui/core/Chip';
 import Divider from '@material-ui/core/Divider';
 import LinearProgress from '@material-ui/core/LinearProgress';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
 import Tab from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import Typography from '@material-ui/core/Typography';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import Chip from '@material-ui/core/Chip';
 import grey from '@material-ui/core/colors/grey';
 import makeStyles from '@material-ui/core/styles/makeStyles';
+
+import { useDebounce } from 'utils/customHooks';
 
 const useStyles = makeStyles({
   toggleButton: { textTransform: 'none' },
@@ -26,17 +29,22 @@ const useStyles = makeStyles({
 
 function App() {
   const styles = useStyles();
+  const [error, setError] = useState('');
   const [tab, setTab] = useState('prs-list');
   const [prsData, setPrsData] = useState([]);
   const [prsLinks, setPrsLinks] = useState([]);
   const [urlData, setUrlData] = useState({
-    owner: 'lalitmee',
-    repository: 'dotfiles',
+    owner: '',
+    repository: '',
     baseBrach: '',
   });
   const [repoType, setRepoType] = useState('public');
   const [prState, setPrState] = useState('open');
   const [loading, setLoading] = useState(false);
+  const [repositories, setRepositories] = useState([]);
+  const [owners, setOwners] = useState([]);
+  const debouncedRepositorySearchTerm = useDebounce(urlData.repository, 1000);
+  const debouncedOwnerSearchTerm = useDebounce(urlData.owner, 1000);
   const octokit = new Octokit({ auth: process.env.REACT_APP_TOKEN });
 
   useEffect(() => {
@@ -47,7 +55,39 @@ function App() {
     }
   }, [prsData]);
 
+  useEffect(async () => {
+    const { owner } = urlData || {};
+    try {
+      if (owner) {
+        const response = await octokit.request('GET /search/users', {
+          q: debouncedOwnerSearchTerm,
+        });
+        const { data = [] } = response || {};
+        setOwners(data);
+      }
+    } catch (err) {
+      setError(err);
+    }
+  }, [debouncedOwnerSearchTerm]);
+  console.log({ debouncedOwnerSearchTerm });
+
+  useEffect(async () => {
+    const { repository } = urlData || {};
+    try {
+      if (repository) {
+        const response = await octokit.request('GET /search/repositories', {
+          q: debouncedRepositorySearchTerm,
+        });
+        const { data = [] } = response || {};
+        setRepositories(data);
+      }
+    } catch (err) {
+      setError(err);
+    }
+  }, [debouncedRepositorySearchTerm]);
+
   function handleChange(event) {
+    console.log({ event });
     event.preventDefault();
     setUrlData(state => ({
       ...state,
@@ -66,20 +106,24 @@ function App() {
   async function getData() {
     setLoading(true);
     const { owner, repository, baseBrach } = urlData || {};
-    if (owner && repository) {
-      const response = await octokit.request(
-        'GET /repos/{owner}/{repo}/pulls',
-        {
-          owner,
-          repo: repository,
-          type: repoType,
-          state: prState,
-          base: baseBrach,
-          per_page: 100,
-        },
-      );
-      const { data = [] } = response || {};
-      setPrsData(data);
+    try {
+      if (owner && repository) {
+        const response = await octokit.request(
+          'GET /repos/{owner}/{repo}/pulls',
+          {
+            owner,
+            repo: repository,
+            type: repoType,
+            state: prState,
+            base: baseBrach,
+            per_page: 100,
+          },
+        );
+        const { data = [] } = response || {};
+        setPrsData(data);
+      }
+    } catch (err) {
+      setError(error);
     }
   }
 
@@ -107,14 +151,34 @@ function App() {
           width={1}
         >
           <Box display="flex" m={1}>
-            <TextField
+            {/* <TextField */}
+            {/*   name="owner" */}
+            {/*   variant="outlined" */}
+            {/*   label="Owner" */}
+            {/*   placeholder="Enter User/Owner" */}
+            {/*   value={urlData.owner} */}
+            {/*   onChange={handleChange} */}
+            {/*   autoFocus */}
+            {/* /> */}
+            <Autocomplete
+              disableClearable
+              id="owners"
               name="owner"
-              variant="outlined"
               label="Owner"
               placeholder="Enter User/Owner"
               value={urlData.owner}
               onChange={handleChange}
-              autoFocus
+              options={owners.map(option => option.login)}
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label="Search input"
+                  margin="normal"
+                  variant="outlined"
+                  InputProps={{ ...params.InputProps, type: 'search' }}
+                  autoFocus
+                />
+              )}
             />
           </Box>
           <Box display="flex" m={1}>
